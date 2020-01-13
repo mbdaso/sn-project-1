@@ -14,18 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include <stdio.h>
+//#include <stdio.h>
 
 #include "lorawan/LoRaWANInterface.h"
 #include "lorawan/system/lorawan_data_structures.h"
 #include "events/EventQueue.h"
+//#include "SerialGPS.h"
 
 // Application helpers
-#include "DummySensor.h"
 #include "trace_helper.h"
 #include "lora_radio_helper.h"
+#include "mbed.h"
 
 using namespace events;
+
 
 // Max payload size can be LORAMAC_PHY_MAXPAYLOAD.
 // This example only communicates with much shorter messages (<30 bytes).
@@ -58,7 +60,6 @@ uint8_t rx_buffer[30];
 /**
  * Dummy sensor class object
  */
-DS1820  ds1820(PC_9);
 
 /**
 * This event queue is the global event queue for both the
@@ -90,8 +91,14 @@ static lorawan_app_callbacks_t callbacks;
 /**
  * Entry point for application
  */
-int main (void)
-{
+uint16_t update_tx_buffer();
+//#include "common.h"
+#include "monitoring.h"
+
+#include <limits.h> 
+int main (void){
+						
+		setupsensors();
     // setup tracing
     setup_trace();
 
@@ -127,7 +134,7 @@ int main (void)
     }
 
     printf("\r\n Adaptive data  rate (ADR) - Enabled \r\n");
-
+		
     retcode = lorawan.connect();
 
     if (retcode == LORAWAN_STATUS_OK ||
@@ -138,38 +145,59 @@ int main (void)
     }
 
     printf("\r\n Connection - In Progress ...\r\n");
-
     // make your event queue dispatching events forever
     ev_queue.dispatch_forever();
-
+		
     return 0;
 }
-
 
 /**
  * Sends a message to the Network Server
  */
+
+BusOut ledRGB(PH_0, PH_1, PB_13);
+uint16_t update_tx_buffer(){
+    uint16_t packet_len;
+
+		readsensors();
+		
+		float lat1 = gpsline.latitude/100;
+		float lon1 = gpsline.longitude/100;
+		
+		//Translate degrees, minutes, seconds to decimal degrees
+		//info: https://www.rapidtables.com/convert/number/degrees-minutes-seconds-to-degrees.html
+		int latintpart = lat1;
+		int lonintpart = lon1;	
+		float latdecimalpart = lat1 - latintpart;
+		float londecimalpart = lon1 - lonintpart;	
+		lat1 = (float)latintpart + latdecimalpart*100/60;
+		lon1 = (float)lonintpart + londecimalpart*100/60;	
+    float sm1 = sensors.sm;
+    float light1 = sensors.light;
+    float temp1 = sensors.temp;
+    char colour1 = sensors.colour;
+
+    packet_len = sprintf((char*) tx_buffer, "%+08.4f%+09.4f%04.1f%04.1f%04.1f%c", lat1, lon1, temp1, light1, sm1, colour1);
+		//packet_len = sprintf((char*) tx_buffer, "%+08.4f|%+09.4f|%04.1f|%04.1f|%04.1f|%c", lat1, lon1, temp1, light1, sm1, colour1);
+		tx_buffer[packet_len] = 0;
+		
+		return packet_len;
+}
+
 static void send_message()
 {
-    uint16_t packet_len;
+    uint16_t packet_len = update_tx_buffer();
     int16_t retcode;
-    float sensor_value;
-
-    if (ds1820.begin()) {
-        ds1820.startConversion();
-        sensor_value = ds1820.read();
-        printf("\r\n Dummy Sensor Value = %3.1f \r\n", sensor_value);
-        ds1820.startConversion();
-    } else {
-        printf("\r\n No sensor found \r\n");
-        return;
-    }
-
-    packet_len = sprintf((char*) tx_buffer, "Dummy Sensor Value is %3.1f",
-                    sensor_value);
-
-    retcode = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_buffer, packet_len,
-                           MSG_CONFIRMED_FLAG);
+	
+		
+	
+		if(packet_len <= 30){
+			retcode = lorawan.send(MBED_CONF_LORA_APP_PORT, tx_buffer, packet_len,
+														 MSG_CONFIRMED_FLAG);
+		}
+		else{
+			printf("%s too long - %d bytes", tx_buffer, packet_len);
+		}
 
     if (retcode < 0) {
         retcode == LORAWAN_STATUS_WOULD_BLOCK ? printf("send - WOULD BLOCK\r\n")
@@ -177,13 +205,29 @@ static void send_message()
         return;
     }
 
-    printf("\r\n %d bytes scheduled for transmission \r\n", retcode);
-    memset(tx_buffer, 0, sizeof(tx_buffer));
+    printf("\r\n %d bytes scheduled for transmission: %s \r\n", retcode, (const char*)tx_buffer);
+		memset(tx_buffer, 0, sizeof(tx_buffer));
+
 }
 
 /**
  * Receive a message from the Network Server
  */
+
+#include "mbedstring.h"
+
+bool equal_strings(const char * s1, const char * s2){
+	char a = '0', b = '0';
+	int i = 0;
+	while(a != '\0' && b != '\0'){
+		a = s1[i];
+		b = s2[i];
+		if(a != b)
+			return false;
+		i++;
+	}
+	return (a==b);
+}
 static void receive_message()
 {
     int16_t retcode;
@@ -196,11 +240,23 @@ static void receive_message()
         return;
     }
 
-    printf(" Data:");
+    printf(" Data: \n");
 
     for (uint8_t i = 0; i < retcode; i++) {
-        printf("%x", rx_buffer[i]);
+        printf(" %c %x\n", rx_buffer[i], rx_buffer[i]);
     }
+		
+		//The available commands must be: "OFF", "Green", and
+		//"Red"
+		if(equal_strings((const char*)rx_buffer, "OFF")){
+			ledRGB = 7; //111
+		}
+		if(equal_strings((const char*)rx_buffer, "Green")){
+			ledRGB = 5; //101
+		}
+		if(equal_strings((const char*)rx_buffer, "Red")){
+			ledRGB = 6; //110
+		}
 
     printf("\r\n Data Length: %d\r\n", retcode);
 
@@ -233,6 +289,7 @@ static void lora_event_handler(lorawan_event_t event)
             }
             break;
         case TX_TIMEOUT:
+						printf("\n\r TX_TIMEOUT");
         case TX_ERROR:
         case TX_CRYPTO_ERROR:
         case TX_SCHEDULING_ERROR:
