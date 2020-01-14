@@ -5,7 +5,7 @@
             "value": "SX1276"
         },
         "main_stack_size":     { "value": 4096 },
-		
+        "lorawan-enabled":    { "value": false},
         "lora-spi-mosi":       { "value": "NC" },
         "lora-spi-miso":       { "value": "NC" },
         "lora-spi-sclk":       { "value": "NC" },
@@ -27,21 +27,19 @@
     },
     "target_overrides": {
         "*": {
-            
+            "target.features_add": ["COMMON_PAL"],
+            "mbed-trace.enable":true,
             "platform.stdio-convert-newlines": true,
             "platform.stdio-baud-rate": 115200,
             "platform.default-serial-baud-rate": 115200,
             "lora.over-the-air-activation": true,
-            "lora.duty-cycle-on": true,
+            "lora.duty-cycle-on": false,
             "lora.phy": "EU868",
-            "lora.device-eui": "{0x40, 0x39, 0x32, 0x35, 0x59, 0x37, 0x91, 0x94 }",
+            "lora.device-eui": "{0x40, 0x39, 0x32, 0x35, 0x59, 0x37, 0x91, 0x04 }",
             "lora.application-eui": "{ 0x70, 0xb3, 0xd5, 0x7e, 0xd0, 0x00, 0xfc, 0xda }",
             "lora.application-key": "{ 0xf3,0x1c,0x2e,0x8b,0xc6,0x71,0x28,0x1d,0x51,0x16,0xf0,0x8f,0xf0,0xb7,0x92,0x8f}",
-			"lora.appskey": "{0xf3,0x1c,0x2e,0x8b,0xc6,0x71,0x28,0x1d,0x51,0x16,0xf0,0x8f,0xf0,0xb7,0x92,0x8f}",
-			"lora.nwkskey": "{0xf3,0x1c,0x2e,0x8b,0xc6,0x71,0x28,0x1d,0x51,0x16,0xf0,0x8f,0xf0,0xb7,0x92,0x8f}",
-			"lora.device-address": "0x00010101"
-           
-			
+            "target.features_add": ["COMMON_PAL"],
+            "mbed-trace.enable": true
         },
 
         "K64F": {
@@ -67,6 +65,7 @@
 
         "DISCO_L072CZ_LRWAN1": {
             "main_stack_size":      1024,
+            "lorawan-enabled":           true,
             "lora-radio":          "SX1276",
             "lora-spi-mosi":       "PA_7",
             "lora-spi-miso":       "PA_6",

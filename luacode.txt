@@ -1,0 +1,96 @@
+function string.fromhex(str)
+    	return (str:gsub('..', function (cc)
+    	return string.char(tonumber(cc, 16))
+    	end))
+    end
+     
+    function WriteColor (color)
+        if color=="r" then
+              color="RED"
+        end
+  		if color=="g" then
+              color="GREEN"
+        end
+        if color=="b"then
+              color="BLUE"
+        end
+        return color;
+    end
+
+    Origin = resiot_startfrom()
+
+    if Origin == "Manual" then
+		payload = "2b34302e323333392d3030332e3337373132332e38302e343730302e3972"
+  		deveui = "6739323559379194"
+  		appeui = "70b3d57ed000fcda"
+  		message = string.fromhex(payload)
+  
+        --resiot_debugf("GRUPO C | Message Recieved" .. valueMessage)
+	
+    	valueLatitude=string.sub(message,1,8)
+        valueLongitude=string.sub(message,9,17)
+        valueTemperature=string.sub(message,18,21)
+        valueLuminosity=string.sub(message,22,25)
+        valueSoilMoisture=string.sub(message,26,29)
+        valueColor=string.sub(message,30)
+  
+        resiot_debugf("Message Information Split")
+        resiot_debugf("Latitud: "..valueLatitude)
+        resiot_debugf("Longitud: "..valueLongitude)
+        resiot_debugf("Temperature: "..valueTemperature.." ºC")
+        resiot_debugf("Luminosity: "..valueLuminosity.." %%")
+        resiot_debugf("Soil Moisture: "..valueSoilMoisture.." %%")
+        resiot_debugf("Color: "..valueColor)
+        valueColor=WriteColor(valueColor)
+  
+        worked, err = resiot_setnodevalue(appeui, deveui, "Latitude", valueLatitude)
+        worked, err = resiot_setnodevalue(appeui, deveui, "Longitude", valueLongitud)
+        worked, err = resiot_setnodevalue(appeui, deveui, "Temperature", valueTemperature)
+    	worked, err = resiot_setnodevalue(appeui, deveui, "Luminosity", valueLuminosity)
+    	worked, err = resiot_setnodevalue(appeui, deveui, "Soil_Moisture", valueSoilMoisture)
+        worked, err = resiot_setnodevalue(appeui, deveui, "Color", valueColor)
+  
+        resiot_debugf("Information Tagged")  
+  		
+    else
+	--resiot_globaldebug("GRUPO C | Nuevo mensaje")
+    	appeui = resiot_comm_getparam("appeui")
+    	deveui = resiot_comm_getparam("deveui")
+  
+    	payload, err = resiot_getlastpayload(appeui, deveui)
+  		message = string.fromhex(payload)
+  
+        resiot_globaldebug("GCCJEJEJE | Message Recieved" .. message)
+	
+    	valueLatitude=string.sub(message,1,8)
+        valueLongitude=string.sub(message,9,17)
+        valueTemperature=string.sub(message,18,21)
+        valueLuminosity=string.sub(message,22,25)
+        valueSoilMoisture=string.sub(message,26,29)
+        valueColor=string.sub(message,30)
+  
+        resiot_globaldebug("GCCJEJEJE | Message Information Split")
+        resiot_globaldebug("GCCJEJEJE | Latitud: "..valueLatitude)
+        resiot_globaldebug("GCCJEJEJE | Longitud: "..valueLongitude)
+        resiot_globaldebug("GCCJEJEJE | Temperature: "..valueTemperature.." ºC")
+        resiot_globaldebug("GCCJEJEJE | Luminosity: "..valueLuminosity.." %%")
+        resiot_globaldebug("GCCJEJEJE | Soil Moisture: "..valueSoilMoisture.." %%")
+        resiot_globaldebug("GCCJEJEJE | Color: "..valueColor)
+        valueColor=WriteColor(valueColor)
+  
+        worked, err = resiot_setnodevalue(appeui, deveui, "Latitude", valueLatitude)
+        worked, err = resiot_setnodevalue(appeui, deveui, "Longitude", valueLongitud)
+        worked, err = resiot_setnodevalue(appeui, deveui, "Temperature", valueTemperature)
+    	worked, err = resiot_setnodevalue(appeui, deveui, "Luminosity", valueLuminosity)
+    	worked, err = resiot_setnodevalue(appeui, deveui, "Soil_Moisture", valueSoilMoisture)
+        worked, err = resiot_setnodevalue(appeui, deveui, "Color", valueColor)
+  
+        resiot_globaldebug("GRUPO C | Information Tagged")  
+    end
+
+	--[[
+	appeui = resiot_comm_getparam("appeui")
+  	deveui = resiot_comm_getparam("deveui")
+  	payload, err = resiot_getlastpayload(appeui, deveui)
+    value = string.fromhex(payload)
+	]]--
